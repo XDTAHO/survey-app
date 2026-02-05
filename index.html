@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>新店廠滿意度調查</title>
+  <title>滿意度調查</title>
   <style>
     :root {
       --primary: #00BCD4;
@@ -143,7 +143,6 @@
     .thank-you { text-align: center; padding: 50px 20px; }
     .check-icon { width: 80px; height: 80px; line-height: 80px; border-radius: 50%; background: #e0f7fa; color: var(--primary); font-size: 3rem; margin: 0 auto 25px; }
     
-    /* Error View */
     .error-view { text-align: center; padding: 40px; color: #d32f2f; display: none; }
   </style>
 </head>
@@ -184,7 +183,7 @@
       <div id="satisfaction-questions-container"></div>
       
       <div class="submit-area" id="submit-area">
-        <textarea id="open-feedback" class="submit-input" rows="3" placeholder="其他建議 (選填)..."></textarea>
+        <textarea id="open-feedback" class="submit-input" rows="3" placeholder="其他建議 (選填)..." oninput="saveOpenFeedback(this.value)"></textarea>
         <button id="btn-submit" class="submit-btn" onclick="submitForm()">送出</button>
       </div>
       <button id="btn-reselect-scenario" class="btn-secondary" onclick="goToStep(2)">重選情境</button>
@@ -201,38 +200,31 @@
   </div>
 
   <script>
-    // 全域變數，初始化為 null，等待 Fetch 填入
     let CONFIG = null;
-    
-    // [改動] 直接使用 JS 抓取 URL 參數 ?id=xxx
     const urlParams = new URLSearchParams(window.location.search);
-    const URL_SCENARIO_ID = urlParams.get('id'); // 可能為 null
+    const URL_SCENARIO_ID = urlParams.get('id'); 
+    const LS_KEY = 'SURVEY_AUTO_SAVE_V1'; // LocalStorage Key
 
     const state = {
       step: 1,
       basicData: {},
       selectedScenario: null,
       satisfactionData: {},
+      openFeedback: "",
       hasBasic: true,
       hasMultipleScenarios: true,
       isUrlForced: false
     };
 
-    // 頁面載入時，發送 Fetch 請求取得設定
     window.onload = async function() {
       try {
-        // 呼叫 Cloudflare Function API
         const response = await fetch('/api/config');
         if (!response.ok) throw new Error('Network response was not ok');
-        
         const result = await response.json();
-        // 我們的 API 回傳結構是 { success: true, data: {...} } 或直接 {...}
-        // 這裡做個相容判斷
         CONFIG = result.data ? result.data : result;
 
         if (!CONFIG || !CONFIG.scenarios) throw new Error('Invalid Config Data');
 
-        // Config 載入成功，開始初始化畫面
         initApp();
       } catch (err) {
         console.error('Config Load Error:', err);
@@ -243,32 +235,29 @@
     };
 
     function initApp() {
-      // 填入標題文字
       document.getElementById('form-title').innerText = CONFIG.formTitle || '問卷系統';
       document.getElementById('form-desc').innerText = CONFIG.formDescription || '';
       document.getElementById('thank-msg').innerText = CONFIG.thankYouMessage || '';
 
-      // 1. 判斷基本資料
       state.hasBasic = CONFIG.basicQuestions && CONFIG.basicQuestions.length > 0;
-      
-      // 2. 判斷多情境
       const scenarioKeys = Object.keys(CONFIG.scenarios || {});
       state.hasMultipleScenarios = scenarioKeys.length > 1;
 
-      // 3. 處理 URL ID 強制路由
+      // URL ID Logic
       let matchedName = null;
       if (URL_SCENARIO_ID && CONFIG.scenarioIdMap) {
-        // ID -> Name 查表
         matchedName = CONFIG.scenarioIdMap[URL_SCENARIO_ID.toString()];
       }
-
       if (matchedName && CONFIG.scenarios[matchedName]) {
         state.selectedScenario = matchedName;
         state.isUrlForced = true; 
         state.hasMultipleScenarios = false; 
       }
 
-      // 4. 渲染 DOM
+      // 嘗試還原暫存資料
+      restoreState();
+
+      // Render
       if (state.hasBasic) renderBasicInfo();
       
       if (!state.isUrlForced && state.hasMultipleScenarios) {
@@ -277,7 +266,7 @@
         state.selectedScenario = scenarioKeys[0];
       }
 
-      // 5. 隱藏 Loading，顯示第一步
+      // Hide Loading
       document.getElementById('loading-overlay').classList.add('hidden');
       setTimeout(() => {
         document.getElementById('loading-overlay').style.display = 'none';
@@ -285,6 +274,50 @@
 
       decideFirstStep();
     }
+
+    // --- LocalStorage Helpers ---
+    function saveState() {
+      // 只存必要的資料，避免存太多
+      const dataToSave = {
+        basicData: state.basicData,
+        selectedScenario: state.isUrlForced ? null : state.selectedScenario, // 強制模式不存情境，以免混亂
+        satisfactionData: state.satisfactionData,
+        openFeedback: state.openFeedback
+      };
+      localStorage.setItem(LS_KEY, JSON.stringify(dataToSave));
+    }
+
+    function restoreState() {
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        
+        // 合併資料
+        if (saved.basicData) state.basicData = { ...saved.basicData };
+        
+        // 只有在非強制 URL 模式下，才還原情境選擇
+        if (!state.isUrlForced && saved.selectedScenario && CONFIG.scenarios[saved.selectedScenario]) {
+          state.selectedScenario = saved.selectedScenario;
+        }
+
+        if (saved.satisfactionData) state.satisfactionData = { ...saved.satisfactionData };
+        if (saved.openFeedback) state.openFeedback = saved.openFeedback;
+
+      } catch (e) {
+        console.warn('Restore state failed', e);
+        localStorage.removeItem(LS_KEY);
+      }
+    }
+
+    function clearState() {
+      localStorage.removeItem(LS_KEY);
+      state.basicData = {};
+      state.satisfactionData = {};
+      state.openFeedback = "";
+      if (!state.isUrlForced) state.selectedScenario = null;
+    }
+    // ----------------------------
 
     function decideFirstStep() {
       if (state.hasBasic) {
@@ -301,8 +334,6 @@
       }
     }
 
-    // --- 渲染邏輯 (與舊版大致相同) ---
-
     function renderBasicInfo() {
       const container = document.getElementById('basic-questions-container');
       container.innerHTML = '';
@@ -310,21 +341,32 @@
         const div = document.createElement('div');
         div.className = 'form-group';
         let html = `<label>${q.title}</label>`;
+        
+        // 檢查是否有暫存值
+        const savedVal = state.basicData[q.title] || '';
+
         if (q.options && q.options.length > 0) {
           html += `<div class="options-grid" id="basic-grid-${idx}">`;
           q.options.forEach(opt => {
-            html += `<div class="option-btn" onclick="selectBasicOption(${idx}, '${opt}', this)">${opt}</div>`;
+            const isSelected = savedVal === opt || (savedVal && !q.options.includes(savedVal) && (opt.includes('其他') || opt.includes('Other')));
+            const activeClass = isSelected ? 'selected' : '';
+            html += `<div class="option-btn ${activeClass}" onclick="selectBasicOption(${idx}, '${opt}', this)">${opt}</div>`;
           });
           html += `</div>`;
+          
+          // 其他輸入框邏輯
+          const isOtherVal = savedVal && !q.options.includes(savedVal);
+          const showClass = isOtherVal ? 'show' : '';
           html += `
-            <div id="basic-other-wrapper-${idx}" class="other-input-wrapper">
+            <div id="basic-other-wrapper-${idx}" class="other-input-wrapper ${showClass}">
               <input type="text" id="basic-other-input-${idx}" 
                      placeholder="請輸入${q.title}..." 
+                     value="${isOtherVal ? savedVal : ''}"
                      oninput="updateBasicOther(${idx}, '${q.title}')">
             </div>
           `;
         } else {
-          html += `<input type="text" class="basic-text-input" data-title="${q.title}" oninput="updateBasicText('${q.title}', this.value)">`;
+          html += `<input type="text" class="basic-text-input" data-title="${q.title}" value="${savedVal}" oninput="updateBasicText('${q.title}', this.value)">`;
         }
         div.innerHTML = html;
         container.appendChild(div);
@@ -350,15 +392,18 @@
         otherInput.value = '';
         state.basicData[title] = optValue;
       }
+      saveState(); // Auto Save
     }
 
     function updateBasicOther(qIdx, title) {
       const val = document.getElementById(`basic-other-input-${qIdx}`).value;
       state.basicData[title] = val;
+      saveState(); // Auto Save
     }
 
     function updateBasicText(title, val) {
       state.basicData[title] = val;
+      saveState(); // Auto Save
     }
 
     function nextStepFromBasic() {
@@ -395,10 +440,16 @@
       const scenarios = CONFIG.scenarios || {};
       Object.keys(scenarios).forEach(key => {
         const btn = document.createElement('div');
-        btn.className = 'option-btn scenario-btn';
+        // 暫存還原
+        if (state.selectedScenario === key) {
+           btn.className = 'option-btn scenario-btn selected';
+        } else {
+           btn.className = 'option-btn scenario-btn';
+        }
         btn.innerText = key;
         btn.onclick = () => {
           state.selectedScenario = key;
+          saveState(); // Auto Save
           setupStep3(key);
           goToStep(3);
         };
@@ -428,8 +479,12 @@
       const openQ = (CONFIG.scenarios && CONFIG.scenarios[scenarioName]) ? CONFIG.scenarios[scenarioName].openQuestion : '';
       const input = document.getElementById('open-feedback');
       input.placeholder = openQ || '其他建議 (選填)...';
-      input.value = '';
-      state.satisfactionData = {};
+      input.value = state.openFeedback || ''; // 還原文字
+    }
+
+    function saveOpenFeedback(val) {
+      state.openFeedback = val;
+      saveState(); // Auto Save
     }
 
     function renderEmojiOptions(qIdx) {
@@ -440,12 +495,17 @@
         {val: 2, char: '🙁', label: '不滿意'},
         {val: 1, char: '😠', label: '非常不滿'}
       ];
-      return emojis.map(e => `
-        <div class="rate-opt" data-val="${e.val}" onclick="selectRating(${qIdx}, ${e.val}, this)">
+      
+      const savedRate = state.satisfactionData[qIdx]; // 讀取暫存
+
+      return emojis.map(e => {
+        const selectedClass = (savedRate === e.val) ? 'selected' : '';
+        return `
+        <div class="rate-opt ${selectedClass}" data-val="${e.val}" onclick="selectRating(${qIdx}, ${e.val}, this)">
           <div class="emoji">${e.char}</div>
           <div class="label">${e.label}</div>
         </div>
-      `).join('');
+      `}).join('');
     }
 
     function selectRating(qIdx, val, elem) {
@@ -453,6 +513,7 @@
       Array.from(parent.children).forEach(c => c.classList.remove('selected'));
       elem.classList.add('selected');
       state.satisfactionData[qIdx] = val;
+      saveState(); // Auto Save
     }
 
     function goToStep(step) {
@@ -464,6 +525,9 @@
       if (step === 2) {
         const backBtn = document.getElementById('btn-back-to-basic');
         if (backBtn) backBtn.style.display = state.hasBasic ? 'block' : 'none';
+        
+        // 如果回到 Step 2，重繪選單以顯示選取狀態
+        renderScenarios();
       }
 
       if (step === 3) {
@@ -477,8 +541,6 @@
         }
       }
     }
-
-    // --- 提交邏輯 (改用 fetch) ---
 
     async function submitForm() {
       const scenCfg = CONFIG.scenarios && CONFIG.scenarios[state.selectedScenario];
@@ -504,11 +566,10 @@
         scenario: state.selectedScenario,
         basicValues: orderedBasicValues,
         satisfactionValues: orderedSatValues,
-        openFeedback: document.getElementById('open-feedback').value
+        openFeedback: state.openFeedback
       };
 
       try {
-        // [改動] 呼叫 Cloudflare Function API
         const response = await fetch('/api/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -518,6 +579,7 @@
         const result = await response.json();
 
         if (result.success) {
+          clearState(); // [重要] 成功後清除暫存
           goToStep('thankyou');
         } else {
           throw new Error(result.error || 'Unknown error');
@@ -530,22 +592,12 @@
     }
 
     function resetFormState() {
-      state.step = 1;
-      state.basicData = {};
-      if (state.hasMultipleScenarios && !state.isUrlForced) {
-        state.selectedScenario = null;
-      }
-      state.satisfactionData = {};
-      
-      document.querySelectorAll('input, textarea').forEach(el => el.value = '');
-      document.querySelectorAll('.option-btn, .rate-opt').forEach(el => el.classList.remove('selected'));
-      document.querySelectorAll('.other-input-wrapper').forEach(el => el.classList.remove('show'));
+      clearState(); // 確保清除
+      initApp(); // 重新初始化
       
       const btn = document.getElementById('btn-submit');
       btn.disabled = false;
       btn.innerText = '送出';
-
-      decideFirstStep();
     }
   </script>
 </body>
