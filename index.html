@@ -23,7 +23,6 @@
     .header h1 { margin: 0; font-size: 1.6rem; font-weight: 600; }
     .header p { margin: 8px 0 0; opacity: 0.9; font-size: 0.95rem; }
     
-    /* 語言按鈕樣式 */
     .lang-switch {
       position: absolute; top: 15px; right: 15px;
       background: rgba(255, 255, 255, 0.2); border-radius: 20px;
@@ -73,6 +72,15 @@
     .thank-you { text-align: center; padding: 50px 20px; }
     .check-icon { width: 80px; height: 80px; line-height: 80px; border-radius: 50%; background: #e0f7fa; color: var(--primary); font-size: 3rem; margin: 0 auto 25px; }
     
+    /* [新增] 頁尾版本號樣式 */
+    .footer-version {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #ccc;
+      padding: 15px 0 20px;
+      margin-top: auto; /* 若內容較少時自動推到底部 */
+    }
+
     @media (max-width: 768px) { .rating-container { grid-template-columns: 1fr 1fr; grid-template-areas: "opt5 opt4" "opt3 opt3" "opt2 opt1"; } .rate-opt[data-val="5"] { grid-area: opt5; } .rate-opt[data-val="4"] { grid-area: opt4; } .rate-opt[data-val="3"] { grid-area: opt3; width: 60%; justify-self: center; } .rate-opt[data-val="2"] { grid-area: opt2; } .rate-opt[data-val="1"] { grid-area: opt1; } }
   </style>
 </head>
@@ -135,6 +143,9 @@
         <button class="nav-btn" onclick="resetFormState()" data-i18n="再填一份">再填一份</button>
       </div>
     </div>
+
+    <div class="footer-version">System v3.2 (i18n)</div>
+
   </div>
 
   <script>
@@ -169,7 +180,6 @@
     };
 
     window.onload = async function() {
-      // 1. 讀取上次語言偏好
       const savedLang = localStorage.getItem('SURVEY_LANG');
       if (savedLang) {
         setLanguage(savedLang); 
@@ -185,10 +195,8 @@
 
         if (!CONFIG || !CONFIG.scenarios) throw new Error('Invalid Config Data');
 
-        // [關鍵] 合併 Sheet 來的字典
         if (CONFIG.i18n) {
           I18N = CONFIG.i18n;
-          // 重新整理語言 (因為可能剛載入新的翻譯)
           setLanguage(CURRENT_LANG);
         }
 
@@ -202,48 +210,37 @@
 
     // --- Language Helper ---
     function t(key) {
-      if (CURRENT_LANG === 'zh-TW') return key; // 原始語言直接回傳
-      
-      // 嘗試找字典
+      if (CURRENT_LANG === 'zh-TW') return key; 
       if (I18N && I18N[CURRENT_LANG] && I18N[CURRENT_LANG][key]) {
         return I18N[CURRENT_LANG][key];
       }
-      return key; // 找不到翻譯就回傳原文
+      return key; 
     }
 
     function setLanguage(lang) {
       CURRENT_LANG = lang;
       localStorage.setItem('SURVEY_LANG', lang);
 
-      // UI: 按鈕狀態
       document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
       const activeBtn = document.querySelector(`.lang-btn[onclick="setLanguage('${lang}')"]`);
       if (activeBtn) activeBtn.classList.add('active');
 
-      // UI: 更新靜態文字 (data-i18n)
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         el.innerText = t(key);
       });
 
-      // UI: 更新輸入框 Placeholder
       const feedbackInput = document.getElementById('open-feedback');
       if (feedbackInput) feedbackInput.placeholder = t('其他建議 (選填)...');
       
-      // UI: 更新動態 Placeholder (基本資料的其他)
       document.querySelectorAll('.other-input-wrapper input').forEach(input => {
-         // 我們利用 input 的 id 判斷題目，重設 placeholder 比較複雜，
-         // 這裡簡化為更新通用前綴
-         if (input.placeholder.includes('...')) {
-            // 簡易重繪機制：若 Config 已載入，重新渲染基本資料最保險
-         }
+         // Placeholder logic handled in render
       });
 
-      // 若 Config 已載入，重新渲染各區域以更新翻譯
       if (CONFIG) {
         document.getElementById('form-title').innerText = t(CONFIG.formTitle || '問卷系統');
-        document.getElementById('form-desc').innerText = CONFIG.formDescription || ''; // 描述通常不翻，或需另外處理
-        document.getElementById('thank-msg').innerText = CONFIG.thankYouMessage || ''; // 感謝詞通常不翻，或需另外處理
+        document.getElementById('form-desc').innerText = CONFIG.formDescription || '';
+        document.getElementById('thank-msg').innerText = CONFIG.thankYouMessage || '';
 
         if(state.step === 1) renderBasicInfo();
         if(state.step === 2) renderScenarios();
@@ -253,7 +250,6 @@
 
     // --- App Logic ---
     function initApp() {
-      // 初始渲染文字
       document.getElementById('form-title').innerText = t(CONFIG.formTitle || '問卷系統');
       document.getElementById('form-desc').innerText = CONFIG.formDescription || '';
       document.getElementById('thank-msg').innerText = CONFIG.thankYouMessage || '';
@@ -347,7 +343,6 @@
         const div = document.createElement('div');
         div.className = 'form-group';
         
-        // [翻譯] 題目
         let html = `<label>${t(q.title)}</label>`;
         
         const savedVal = state.basicData[q.title] || '';
@@ -357,14 +352,12 @@
           q.options.forEach(opt => {
             const isSelected = savedVal === opt || (savedVal && !q.options.includes(savedVal) && (opt.includes('其他') || opt.includes('Other')));
             const activeClass = isSelected ? 'selected' : '';
-            // [翻譯] 選項
             html += `<div class="option-btn ${activeClass}" onclick="selectBasicOption(${idx}, '${opt}', this)">${t(opt)}</div>`;
           });
           html += `</div>`;
           
           const isOtherVal = savedVal && !q.options.includes(savedVal);
           const showClass = isOtherVal ? 'show' : '';
-          // [翻譯] Placeholder
           html += `
             <div id="basic-other-wrapper-${idx}" class="other-input-wrapper ${showClass}">
               <input type="text" id="basic-other-input-${idx}" 
@@ -419,7 +412,7 @@
       (CONFIG.basicQuestions || []).forEach(q => {
         const val = state.basicData[q.title];
         if (!val || val.toString().trim() === '') {
-          missing.push(t(q.title)); // [翻譯] 提示訊息中的欄位名
+          missing.push(t(q.title)); 
         }
       });
       if (missing.length > 0) {
@@ -453,7 +446,6 @@
         } else {
            btn.className = 'option-btn scenario-btn';
         }
-        // [翻譯] 情境名稱
         btn.innerText = t(key);
         btn.onclick = () => {
           state.selectedScenario = key;
@@ -475,7 +467,6 @@
       questions.forEach((qTitle, idx) => {
         const div = document.createElement('div');
         div.className = 'form-group';
-        // [翻譯] 題目
         div.innerHTML = `
           <label style="margin-bottom:8px;">${idx + 1}. ${t(qTitle)}</label>
           <div class="rating-container" id="rate-group-${idx}">
@@ -487,7 +478,6 @@
       
       const openQ = (CONFIG.scenarios && CONFIG.scenarios[scenarioName]) ? CONFIG.scenarios[scenarioName].openQuestion : '';
       const input = document.getElementById('open-feedback');
-      // [翻譯] 開放式問題 placeholder
       input.placeholder = openQ ? t(openQ) : t('其他建議 (選填)...');
       input.value = state.openFeedback || '';
     }
@@ -510,7 +500,6 @@
 
       return emojis.map(e => {
         const selectedClass = (savedRate === e.val) ? 'selected' : '';
-        // [翻譯] 滿意度標籤
         return `
         <div class="rate-opt ${selectedClass}" data-val="${e.val}" onclick="selectRating(${qIdx}, ${e.val}, this)">
           <div class="emoji">${e.char}</div>
@@ -536,7 +525,6 @@
       if (step === 2) {
         const backBtn = document.getElementById('btn-back-to-basic');
         if (backBtn) backBtn.style.display = state.hasBasic ? 'block' : 'none';
-        // 若回到上一步，重新渲染以確保翻譯正確
         renderScenarios();
       }
 
