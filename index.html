@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>新店廠滿意度調查</title>
+  <style>
+    :root {
+      --primary: #00BCD4;
+      --primary-dark: #008ba3;
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --text: #333;
+      --border: #e0e0e0;
+      --emoji-size: 2.2rem;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      margin: 0;
+      padding: 20px 0;
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: var(--card);
+      min-height: 95vh;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      display: flex; flex-direction: column;
+      border-radius: 12px; overflow: hidden;
+      position: relative;
+    }
+    
+    /* Loading Overlay */
+    .loading-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 999;
+      transition: opacity 0.3s;
+    }
+    .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #f3f3f3; border-top: 4px solid var(--primary);
+      border-radius: 50%; animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .header { background: var(--primary); color: white; padding: 30px 25px; }
+    .header h1 { margin: 0; font-size: 1.6rem; font-weight: 600; }
+    .header p { margin: 8px 0 0; opacity: 0.9; font-size: 0.95rem; }
+
+    .view { display: none; padding: 25px; flex: 1; animation: fadeIn 0.3s ease forwards; }
+    .view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    .form-group { margin-bottom: 25px; }
+    label { display: block; margin-bottom: 10px; font-weight: 600; color: #444; font-size: 1rem; }
+    
+    input[type="text"], textarea {
+      width: 100%; padding: 12px 15px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 16px; background: #fafafa; transition: 0.2s;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--primary); background: #fff; outline: none;
+    }
+
+    /* Options Grid */
+    .options-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+    .option-btn {
+      flex: 1 1 calc(33% - 10px); min-width: 100px; padding: 12px 10px;
+      background: white; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 1rem; color: var(--text); cursor: pointer; transition: all 0.2s;
+      text-align: center; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .option-btn:hover { border-color: var(--primary); color: var(--primary); background: #f0fbff; }
+    .option-btn.selected {
+      background: var(--primary); color: white; border-color: var(--primary);
+      box-shadow: 0 4px 8px rgba(0, 188, 212, 0.3); font-weight: 600;
+    }
+
+    .scenario-btn {
+      flex: 1 1 calc(50% - 12px); padding: 20px 10px; font-size: 1.1rem;
+      font-weight: 600; border-width: 2px; border-radius: 12px;
+    }
+
+    .other-input-wrapper { margin-top: 10px; display: none; animation: slideDown 0.3s ease; }
+    .other-input-wrapper.show { display: block; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Emoji Rating */
+    .rating-container { display: grid; gap: 8px; grid-template-columns: repeat(5, 1fr); margin-top: 5px; }
+    .rate-opt {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 10px 0; border-radius: 12px; cursor: pointer; transition: background 0.2s;
+    }
+    .emoji { 
+      font-size: var(--emoji-size); margin-bottom: 5px; line-height: 1;
+      filter: grayscale(100%); opacity: 0.4; transition: all 0.4s;
+    }
+    .label { font-size: 0.75rem; color: #999; text-align: center; }
+    .rate-opt.selected .emoji { filter: grayscale(0%); opacity: 1; transform: scale(1.6); }
+    .rate-opt.selected .label { color: var(--primary-dark); font-weight: bold; }
+
+    @media (max-width: 768px) {
+      .rating-container {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas: "opt5 opt4" "opt3 opt3" "opt2 opt1";
+      }
+      .rate-opt[data-val="5"] { grid-area: opt5; }
+      .rate-opt[data-val="4"] { grid-area: opt4; }
+      .rate-opt[data-val="3"] { grid-area: opt3; width: 60%; justify-self: center; }
+      .rate-opt[data-val="2"] { grid-area: opt2; }
+      .rate-opt[data-val="1"] { grid-area: opt1; }
+    }
+
+    .submit-area { display: flex; gap: 12px; margin-top: 40px; align-items: stretch; }
+    textarea.submit-input { flex: 1; min-height: 80px; resize: vertical; }
+    .submit-btn {
+      width: 100px; background: var(--primary); color: white; border: none;
+      border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+    .nav-btn {
+      width: 100%; padding: 15px; background: var(--primary); color: white;
+      border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 600;
+      margin-top: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0, 188, 212, 0.2);
+    }
+    .btn-secondary {
+      display: block; margin: 20px auto 0; background: transparent; color: #999;
+      border: 1px solid #eee; padding: 8px 20px; border-radius: 20px; font-size: 0.85rem; cursor: pointer;
+    }
+
+    .thank-you { text-align: center; padding: 50px 20px; }
+    .check-icon { width: 80px; height: 80px; line-height: 80px; border-radius: 50%; background: #e0f7fa; color: var(--primary); font-size: 3rem; margin: 0 auto 25px; }
+    
+    /* Error View */
+    .error-view { text-align: center; padding: 40px; color: #d32f2f; display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="spinner"></div>
+      <p style="margin-top:15px; color:#666; font-size:0.9rem;">載入問卷中...</p>
+    </div>
+
+    <div id="error-view" class="error-view">
+      <h3>無法載入問卷</h3>
+      <p id="error-msg">請檢查網路連線後重試</p>
+      <button class="btn-secondary" onclick="window.location.reload()">重新整理</button>
+    </div>
+
+    <div class="header">
+      <h1 id="form-title">...</h1>
+      <p id="form-desc"></p>
+    </div>
+
+    <div id="step-1" class="view">
+      <div id="basic-questions-container"></div>
+      <button class="nav-btn" onclick="nextStepFromBasic()">下一步</button>
+    </div>
+
+    <div id="step-2" class="view">
+      <div class="form-group">
+        <label style="text-align:center; font-size:1.2rem; margin-bottom:20px;">請選擇您的體驗情境</label>
+        <div id="scenario-list" class="options-grid"></div>
+      </div>
+      <button id="btn-back-to-basic" class="btn-secondary" onclick="goToStep(1)">← 返回修改基本資料</button>
+    </div>
+
+    <div id="step-3" class="view">
+      <h3 id="current-scenario-title" style="margin-top:0; color:var(--primary);">滿意度調查</h3>
+      <div id="satisfaction-questions-container"></div>
+      
+      <div class="submit-area" id="submit-area">
+        <textarea id="open-feedback" class="submit-input" rows="3" placeholder="其他建議 (選填)..."></textarea>
+        <button id="btn-submit" class="submit-btn" onclick="submitForm()">送出</button>
+      </div>
+      <button id="btn-reselect-scenario" class="btn-secondary" onclick="goToStep(2)">重選情境</button>
+    </div>
+
+    <div id="step-thankyou" class="view">
+      <div class="thank-you">
+        <div class="check-icon">✓</div>
+        <h2 style="margin:0 0 10px;">提交成功</h2>
+        <p id="thank-msg" style="color:#666; margin-bottom:30px;"></p>
+        <button class="nav-btn" onclick="resetFormState()">再填一份</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 全域變數，初始化為 null，等待 Fetch 填入
+    let CONFIG = null;
+    
+    // [改動] 直接使用 JS 抓取 URL 參數 ?id=xxx
+    const urlParams = new URLSearchParams(window.location.search);
+    const URL_SCENARIO_ID = urlParams.get('id'); // 可能為 null
+
+    const state = {
+      step: 1,
+      basicData: {},
+      selectedScenario: null,
+      satisfactionData: {},
+      hasBasic: true,
+      hasMultipleScenarios: true,
+      isUrlForced: false
+    };
+
+    // 頁面載入時，發送 Fetch 請求取得設定
+    window.onload = async function() {
+      try {
+        // 呼叫 Cloudflare Function API
+        const response = await fetch('/api/config');
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const result = await response.json();
+        // 我們的 API 回傳結構是 { success: true, data: {...} } 或直接 {...}
+        // 這裡做個相容判斷
+        CONFIG = result.data ? result.data : result;
+
+        if (!CONFIG || !CONFIG.scenarios) throw new Error('Invalid Config Data');
+
+        // Config 載入成功，開始初始化畫面
+        initApp();
+      } catch (err) {
+        console.error('Config Load Error:', err);
+        document.getElementById('loading-overlay').style.display = 'none';
+        document.getElementById('error-view').style.display = 'block';
+        document.getElementById('error-msg').innerText = '載入失敗，請稍後再試。';
+      }
+    };
+
+    function initApp() {
+      // 填入標題文字
+      document.getElementById('form-title').innerText = CONFIG.formTitle || '問卷系統';
+      document.getElementById('form-desc').innerText = CONFIG.formDescription || '';
+      document.getElementById('thank-msg').innerText = CONFIG.thankYouMessage || '';
+
+      // 1. 判斷基本資料
+      state.hasBasic = CONFIG.basicQuestions && CONFIG.basicQuestions.length > 0;
+      
+      // 2. 判斷多情境
+      const scenarioKeys = Object.keys(CONFIG.scenarios || {});
+      state.hasMultipleScenarios = scenarioKeys.length > 1;
+
+      // 3. 處理 URL ID 強制路由
+      let matchedName = null;
+      if (URL_SCENARIO_ID && CONFIG.scenarioIdMap) {
+        // ID -> Name 查表
+        matchedName = CONFIG.scenarioIdMap[URL_SCENARIO_ID.toString()];
+      }
+
+      if (matchedName && CONFIG.scenarios[matchedName]) {
+        state.selectedScenario = matchedName;
+        state.isUrlForced = true; 
+        state.hasMultipleScenarios = false; 
+      }
+
+      // 4. 渲染 DOM
+      if (state.hasBasic) renderBasicInfo();
+      
+      if (!state.isUrlForced && state.hasMultipleScenarios) {
+        renderScenarios();
+      } else if (scenarioKeys.length === 1 && !state.selectedScenario) {
+        state.selectedScenario = scenarioKeys[0];
+      }
+
+      // 5. 隱藏 Loading，顯示第一步
+      document.getElementById('loading-overlay').classList.add('hidden');
+      setTimeout(() => {
+        document.getElementById('loading-overlay').style.display = 'none';
+      }, 300);
+
+      decideFirstStep();
+    }
+
+    function decideFirstStep() {
+      if (state.hasBasic) {
+        goToStep(1);
+      } else if (state.hasMultipleScenarios && !state.isUrlForced) {
+        goToStep(2);
+      } else {
+        if (state.selectedScenario) {
+          setupStep3(state.selectedScenario);
+          goToStep(3);
+        } else {
+          alert('設定錯誤：無情境資料');
+        }
+      }
+    }
+
+    // --- 渲染邏輯 (與舊版大致相同) ---
+
+    function renderBasicInfo() {
+      const container = document.getElementById('basic-questions-container');
+      container.innerHTML = '';
+      (CONFIG.basicQuestions || []).forEach((q, idx) => {
+        const div = document.createElement('div');
+        div.className = 'form-group';
+        let html = `<label>${q.title}</label>`;
+        if (q.options && q.options.length > 0) {
+          html += `<div class="options-grid" id="basic-grid-${idx}">`;
+          q.options.forEach(opt => {
+            html += `<div class="option-btn" onclick="selectBasicOption(${idx}, '${opt}', this)">${opt}</div>`;
+          });
+          html += `</div>`;
+          html += `
+            <div id="basic-other-wrapper-${idx}" class="other-input-wrapper">
+              <input type="text" id="basic-other-input-${idx}" 
+                     placeholder="請輸入${q.title}..." 
+                     oninput="updateBasicOther(${idx}, '${q.title}')">
+            </div>
+          `;
+        } else {
+          html += `<input type="text" class="basic-text-input" data-title="${q.title}" oninput="updateBasicText('${q.title}', this.value)">`;
+        }
+        div.innerHTML = html;
+        container.appendChild(div);
+      });
+    }
+
+    function selectBasicOption(qIdx, optValue, elem) {
+      const title = CONFIG.basicQuestions[qIdx].title;
+      const grid = document.getElementById(`basic-grid-${qIdx}`);
+      const otherWrapper = document.getElementById(`basic-other-wrapper-${qIdx}`);
+      const otherInput = document.getElementById(`basic-other-input-${qIdx}`);
+
+      Array.from(grid.children).forEach(c => c.classList.remove('selected'));
+      elem.classList.add('selected');
+
+      const isOther = optValue.includes('其他') || optValue.toLowerCase().includes('other');
+      if (isOther) {
+        otherWrapper.classList.add('show');
+        otherInput.focus();
+        state.basicData[title] = otherInput.value;
+      } else {
+        otherWrapper.classList.remove('show');
+        otherInput.value = '';
+        state.basicData[title] = optValue;
+      }
+    }
+
+    function updateBasicOther(qIdx, title) {
+      const val = document.getElementById(`basic-other-input-${qIdx}`).value;
+      state.basicData[title] = val;
+    }
+
+    function updateBasicText(title, val) {
+      state.basicData[title] = val;
+    }
+
+    function nextStepFromBasic() {
+      const missing = [];
+      (CONFIG.basicQuestions || []).forEach(q => {
+        const val = state.basicData[q.title];
+        if (!val || val.toString().trim() === '') {
+          missing.push(q.title);
+        }
+      });
+      if (missing.length > 0) {
+        alert(`請填寫以下欄位：\n${missing.join(', ')}`);
+        return;
+      }
+
+      if (state.isUrlForced && state.selectedScenario) {
+        setupStep3(state.selectedScenario);
+        goToStep(3);
+        return;
+      }
+      if (state.hasMultipleScenarios) {
+        goToStep(2);
+      } else {
+        if (state.selectedScenario) {
+          setupStep3(state.selectedScenario);
+          goToStep(3);
+        }
+      }
+    }
+
+    function renderScenarios() {
+      const list = document.getElementById('scenario-list');
+      list.innerHTML = '';
+      const scenarios = CONFIG.scenarios || {};
+      Object.keys(scenarios).forEach(key => {
+        const btn = document.createElement('div');
+        btn.className = 'option-btn scenario-btn';
+        btn.innerText = key;
+        btn.onclick = () => {
+          state.selectedScenario = key;
+          setupStep3(key);
+          goToStep(3);
+        };
+        list.appendChild(btn);
+      });
+    }
+
+    function setupStep3(scenarioName) {
+      document.getElementById('current-scenario-title').innerText = scenarioName;
+      const container = document.getElementById('satisfaction-questions-container');
+      container.innerHTML = '';
+      
+      const questions = (CONFIG.scenarios && CONFIG.scenarios[scenarioName]) ? CONFIG.scenarios[scenarioName].questions : [];
+      
+      questions.forEach((qTitle, idx) => {
+        const div = document.createElement('div');
+        div.className = 'form-group';
+        div.innerHTML = `
+          <label style="margin-bottom:8px;">${idx + 1}. ${qTitle}</label>
+          <div class="rating-container" id="rate-group-${idx}">
+            ${renderEmojiOptions(idx)}
+          </div>
+        `;
+        container.appendChild(div);
+      });
+      
+      const openQ = (CONFIG.scenarios && CONFIG.scenarios[scenarioName]) ? CONFIG.scenarios[scenarioName].openQuestion : '';
+      const input = document.getElementById('open-feedback');
+      input.placeholder = openQ || '其他建議 (選填)...';
+      input.value = '';
+      state.satisfactionData = {};
+    }
+
+    function renderEmojiOptions(qIdx) {
+      const emojis = [
+        {val: 5, char: '😍', label: '非常滿意'},
+        {val: 4, char: '🙂', label: '滿意'},
+        {val: 3, char: '😐', label: '普通'},
+        {val: 2, char: '🙁', label: '不滿意'},
+        {val: 1, char: '😠', label: '非常不滿'}
+      ];
+      return emojis.map(e => `
+        <div class="rate-opt" data-val="${e.val}" onclick="selectRating(${qIdx}, ${e.val}, this)">
+          <div class="emoji">${e.char}</div>
+          <div class="label">${e.label}</div>
+        </div>
+      `).join('');
+    }
+
+    function selectRating(qIdx, val, elem) {
+      const parent = document.getElementById(`rate-group-${qIdx}`);
+      Array.from(parent.children).forEach(c => c.classList.remove('selected'));
+      elem.classList.add('selected');
+      state.satisfactionData[qIdx] = val;
+    }
+
+    function goToStep(step) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('step-' + step).classList.add('active');
+      state.step = step;
+      window.scrollTo(0, 0);
+
+      if (step === 2) {
+        const backBtn = document.getElementById('btn-back-to-basic');
+        if (backBtn) backBtn.style.display = state.hasBasic ? 'block' : 'none';
+      }
+
+      if (step === 3) {
+        const reselectBtn = document.getElementById('btn-reselect-scenario');
+        if (reselectBtn) {
+          if (state.isUrlForced) {
+            reselectBtn.style.display = 'none';
+          } else {
+            reselectBtn.style.display = state.hasMultipleScenarios ? 'block' : 'none';
+          }
+        }
+      }
+    }
+
+    // --- 提交邏輯 (改用 fetch) ---
+
+    async function submitForm() {
+      const scenCfg = CONFIG.scenarios && CONFIG.scenarios[state.selectedScenario];
+      if (!scenCfg) { alert('尚未選擇情境'); return; }
+      
+      const qCount = scenCfg.questions.length;
+      if (Object.keys(state.satisfactionData).length < qCount) {
+        alert('請完成所有滿意度評分');
+        return;
+      }
+
+      const btn = document.getElementById('btn-submit');
+      btn.disabled = true;
+      btn.innerText = '送出...';
+
+      const orderedBasicValues = (CONFIG.basicQuestions || []).map(q => state.basicData[q.title] || '');
+      const orderedSatValues = [];
+      for (let i = 0; i < qCount; i++) {
+        orderedSatValues.push(state.satisfactionData[i]);
+      }
+
+      const payload = {
+        scenario: state.selectedScenario,
+        basicValues: orderedBasicValues,
+        satisfactionValues: orderedSatValues,
+        openFeedback: document.getElementById('open-feedback').value
+      };
+
+      try {
+        // [改動] 呼叫 Cloudflare Function API
+        const response = await fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          goToStep('thankyou');
+        } else {
+          throw new Error(result.error || 'Unknown error');
+        }
+      } catch (err) {
+        alert('連線失敗: ' + err.message);
+        btn.disabled = false;
+        btn.innerText = '送出';
+      }
+    }
+
+    function resetFormState() {
+      state.step = 1;
+      state.basicData = {};
+      if (state.hasMultipleScenarios && !state.isUrlForced) {
+        state.selectedScenario = null;
+      }
+      state.satisfactionData = {};
+      
+      document.querySelectorAll('input, textarea').forEach(el => el.value = '');
+      document.querySelectorAll('.option-btn, .rate-opt').forEach(el => el.classList.remove('selected'));
+      document.querySelectorAll('.other-input-wrapper').forEach(el => el.classList.remove('show'));
+      
+      const btn = document.getElementById('btn-submit');
+      btn.disabled = false;
+      btn.innerText = '送出';
+
+      decideFirstStep();
+    }
+  </script>
+</body>
+</html>
