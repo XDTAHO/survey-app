@@ -5,144 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>滿意度調查</title>
   <style>
-    :root {
-      --primary: #00BCD4;
-      --primary-dark: #008ba3;
-      --bg: #f0f4f8;
-      --card: #ffffff;
-      --text: #333;
-      --border: #e0e0e0;
-      --emoji-size: 2.2rem;
-    }
+    /* 保持原有的 CSS 樣式，不做更動，僅列出主要結構 */
+    :root { --primary: #00BCD4; --primary-dark: #008ba3; --bg: #f0f4f8; --card: #ffffff; --text: #333; --border: #e0e0e0; --emoji-size: 2.2rem; }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    
-    body {
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: var(--bg);
-      margin: 0;
-      padding: 20px 0;
-      color: var(--text);
-    }
-
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background: var(--card);
-      min-height: 95vh;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      display: flex; flex-direction: column;
-      border-radius: 12px; overflow: hidden;
-      position: relative;
-    }
-    
-    /* Loading Overlay */
-    .loading-overlay {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(255, 255, 255, 0.9);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      z-index: 999;
-      transition: opacity 0.3s;
-    }
+    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 20px 0; color: var(--text); }
+    .container { max-width: 600px; margin: 0 auto; background: var(--card); min-height: 95vh; box-shadow: 0 4px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; position: relative; }
+    .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
-    .spinner {
-      width: 40px; height: 40px;
-      border: 4px solid #f3f3f3; border-top: 4px solid var(--primary);
-      border-radius: 50%; animation: spin 1s linear infinite;
-    }
+    .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
     .header { background: var(--primary); color: white; padding: 30px 25px; }
     .header h1 { margin: 0; font-size: 1.6rem; font-weight: 600; }
     .header p { margin: 8px 0 0; opacity: 0.9; font-size: 0.95rem; }
-
     .view { display: none; padding: 25px; flex: 1; animation: fadeIn 0.3s ease forwards; }
     .view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
     .form-group { margin-bottom: 25px; }
     label { display: block; margin-bottom: 10px; font-weight: 600; color: #444; font-size: 1rem; }
-    
-    input[type="text"], textarea {
-      width: 100%; padding: 12px 15px; border: 1px solid var(--border);
-      border-radius: 8px; font-size: 16px; background: #fafafa; transition: 0.2s;
-    }
-    input:focus, textarea:focus {
-      border-color: var(--primary); background: #fff; outline: none;
-    }
-
-    /* Options Grid */
+    input[type="text"], textarea { width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: #fafafa; transition: 0.2s; }
+    input:focus, textarea:focus { border-color: var(--primary); background: #fff; outline: none; }
     .options-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-    .option-btn {
-      flex: 1 1 calc(33% - 10px); min-width: 100px; padding: 12px 10px;
-      background: white; border: 1px solid var(--border); border-radius: 8px;
-      font-size: 1rem; color: var(--text); cursor: pointer; transition: all 0.2s;
-      text-align: center; display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
+    .option-btn { flex: 1 1 calc(33% - 10px); min-width: 100px; padding: 12px 10px; background: white; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; color: var(--text); cursor: pointer; transition: all 0.2s; text-align: center; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .option-btn:hover { border-color: var(--primary); color: var(--primary); background: #f0fbff; }
-    .option-btn.selected {
-      background: var(--primary); color: white; border-color: var(--primary);
-      box-shadow: 0 4px 8px rgba(0, 188, 212, 0.3); font-weight: 600;
-    }
-
-    .scenario-btn {
-      flex: 1 1 calc(50% - 12px); padding: 20px 10px; font-size: 1.1rem;
-      font-weight: 600; border-width: 2px; border-radius: 12px;
-    }
-
+    .option-btn.selected { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 8px rgba(0, 188, 212, 0.3); font-weight: 600; }
+    .scenario-btn { flex: 1 1 calc(50% - 12px); padding: 20px 10px; font-size: 1.1rem; font-weight: 600; border-width: 2px; border-radius: 12px; }
     .other-input-wrapper { margin-top: 10px; display: none; animation: slideDown 0.3s ease; }
     .other-input-wrapper.show { display: block; }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* Emoji Rating */
     .rating-container { display: grid; gap: 8px; grid-template-columns: repeat(5, 1fr); margin-top: 5px; }
-    .rate-opt {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 10px 0; border-radius: 12px; cursor: pointer; transition: background 0.2s;
-    }
-    .emoji { 
-      font-size: var(--emoji-size); margin-bottom: 5px; line-height: 1;
-      filter: grayscale(100%); opacity: 0.4; transition: all 0.4s;
-    }
+    .rate-opt { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+    .emoji { font-size: var(--emoji-size); margin-bottom: 5px; line-height: 1; filter: grayscale(100%); opacity: 0.4; transition: all 0.4s; }
     .label { font-size: 0.75rem; color: #999; text-align: center; }
     .rate-opt.selected .emoji { filter: grayscale(0%); opacity: 1; transform: scale(1.6); }
     .rate-opt.selected .label { color: var(--primary-dark); font-weight: bold; }
-
-    @media (max-width: 768px) {
-      .rating-container {
-        grid-template-columns: 1fr 1fr;
-        grid-template-areas: "opt5 opt4" "opt3 opt3" "opt2 opt1";
-      }
-      .rate-opt[data-val="5"] { grid-area: opt5; }
-      .rate-opt[data-val="4"] { grid-area: opt4; }
-      .rate-opt[data-val="3"] { grid-area: opt3; width: 60%; justify-self: center; }
-      .rate-opt[data-val="2"] { grid-area: opt2; }
-      .rate-opt[data-val="1"] { grid-area: opt1; }
-    }
-
+    @media (max-width: 768px) { .rating-container { grid-template-columns: 1fr 1fr; grid-template-areas: "opt5 opt4" "opt3 opt3" "opt2 opt1"; } .rate-opt[data-val="5"] { grid-area: opt5; } .rate-opt[data-val="4"] { grid-area: opt4; } .rate-opt[data-val="3"] { grid-area: opt3; width: 60%; justify-self: center; } .rate-opt[data-val="2"] { grid-area: opt2; } .rate-opt[data-val="1"] { grid-area: opt1; } }
     .submit-area { display: flex; gap: 12px; margin-top: 40px; align-items: stretch; }
     textarea.submit-input { flex: 1; min-height: 80px; resize: vertical; }
-    .submit-btn {
-      width: 100px; background: var(--primary); color: white; border: none;
-      border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-    }
+    .submit-btn { width: 100px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
-
-    .nav-btn {
-      width: 100%; padding: 15px; background: var(--primary); color: white;
-      border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 600;
-      margin-top: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0, 188, 212, 0.2);
-    }
-    .btn-secondary {
-      display: block; margin: 20px auto 0; background: transparent; color: #999;
-      border: 1px solid #eee; padding: 8px 20px; border-radius: 20px; font-size: 0.85rem; cursor: pointer;
-    }
-
+    .nav-btn { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 600; margin-top: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0, 188, 212, 0.2); }
+    .btn-secondary { display: block; margin: 20px auto 0; background: transparent; color: #999; border: 1px solid #eee; padding: 8px 20px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; }
     .thank-you { text-align: center; padding: 50px 20px; }
     .check-icon { width: 80px; height: 80px; line-height: 80px; border-radius: 50%; background: #e0f7fa; color: var(--primary); font-size: 3rem; margin: 0 auto 25px; }
-    
     .error-view { text-align: center; padding: 40px; color: #d32f2f; display: none; }
   </style>
 </head>
@@ -275,16 +179,20 @@
       decideFirstStep();
     }
 
-    // --- LocalStorage Helpers ---
+    // --- LocalStorage Helpers (Final Version) ---
     function saveState() {
-      // 只存必要的資料，避免存太多
-      const dataToSave = {
-        basicData: state.basicData,
-        selectedScenario: state.isUrlForced ? null : state.selectedScenario, // 強制模式不存情境，以免混亂
-        satisfactionData: state.satisfactionData,
-        openFeedback: state.openFeedback
-      };
-      localStorage.setItem(LS_KEY, JSON.stringify(dataToSave));
+      try {
+        const dataToSave = {
+          basicData: state.basicData,
+          selectedScenario: state.isUrlForced ? null : state.selectedScenario, // 強制模式不存情境
+          satisfactionData: state.satisfactionData,
+          openFeedback: state.openFeedback
+        };
+        localStorage.setItem(LS_KEY, JSON.stringify(dataToSave));
+      } catch (e) {
+        // [防護] 避免空間滿了導致崩潰
+        console.warn('LocalStorage full or disabled', e);
+      }
     }
 
     function restoreState() {
@@ -295,12 +203,9 @@
         
         // 合併資料
         if (saved.basicData) state.basicData = { ...saved.basicData };
-        
-        // 只有在非強制 URL 模式下，才還原情境選擇
         if (!state.isUrlForced && saved.selectedScenario && CONFIG.scenarios[saved.selectedScenario]) {
           state.selectedScenario = saved.selectedScenario;
         }
-
         if (saved.satisfactionData) state.satisfactionData = { ...saved.satisfactionData };
         if (saved.openFeedback) state.openFeedback = saved.openFeedback;
 
@@ -342,7 +247,6 @@
         div.className = 'form-group';
         let html = `<label>${q.title}</label>`;
         
-        // 檢查是否有暫存值
         const savedVal = state.basicData[q.title] || '';
 
         if (q.options && q.options.length > 0) {
@@ -354,7 +258,6 @@
           });
           html += `</div>`;
           
-          // 其他輸入框邏輯
           const isOtherVal = savedVal && !q.options.includes(savedVal);
           const showClass = isOtherVal ? 'show' : '';
           html += `
@@ -392,18 +295,18 @@
         otherInput.value = '';
         state.basicData[title] = optValue;
       }
-      saveState(); // Auto Save
+      saveState();
     }
 
     function updateBasicOther(qIdx, title) {
       const val = document.getElementById(`basic-other-input-${qIdx}`).value;
       state.basicData[title] = val;
-      saveState(); // Auto Save
+      saveState();
     }
 
     function updateBasicText(title, val) {
       state.basicData[title] = val;
-      saveState(); // Auto Save
+      saveState();
     }
 
     function nextStepFromBasic() {
@@ -440,7 +343,6 @@
       const scenarios = CONFIG.scenarios || {};
       Object.keys(scenarios).forEach(key => {
         const btn = document.createElement('div');
-        // 暫存還原
         if (state.selectedScenario === key) {
            btn.className = 'option-btn scenario-btn selected';
         } else {
@@ -449,7 +351,7 @@
         btn.innerText = key;
         btn.onclick = () => {
           state.selectedScenario = key;
-          saveState(); // Auto Save
+          saveState();
           setupStep3(key);
           goToStep(3);
         };
@@ -479,12 +381,12 @@
       const openQ = (CONFIG.scenarios && CONFIG.scenarios[scenarioName]) ? CONFIG.scenarios[scenarioName].openQuestion : '';
       const input = document.getElementById('open-feedback');
       input.placeholder = openQ || '其他建議 (選填)...';
-      input.value = state.openFeedback || ''; // 還原文字
+      input.value = state.openFeedback || '';
     }
 
     function saveOpenFeedback(val) {
       state.openFeedback = val;
-      saveState(); // Auto Save
+      saveState();
     }
 
     function renderEmojiOptions(qIdx) {
@@ -496,7 +398,7 @@
         {val: 1, char: '😠', label: '非常不滿'}
       ];
       
-      const savedRate = state.satisfactionData[qIdx]; // 讀取暫存
+      const savedRate = state.satisfactionData[qIdx];
 
       return emojis.map(e => {
         const selectedClass = (savedRate === e.val) ? 'selected' : '';
@@ -513,7 +415,7 @@
       Array.from(parent.children).forEach(c => c.classList.remove('selected'));
       elem.classList.add('selected');
       state.satisfactionData[qIdx] = val;
-      saveState(); // Auto Save
+      saveState();
     }
 
     function goToStep(step) {
@@ -525,8 +427,6 @@
       if (step === 2) {
         const backBtn = document.getElementById('btn-back-to-basic');
         if (backBtn) backBtn.style.display = state.hasBasic ? 'block' : 'none';
-        
-        // 如果回到 Step 2，重繪選單以顯示選取狀態
         renderScenarios();
       }
 
@@ -579,7 +479,7 @@
         const result = await response.json();
 
         if (result.success) {
-          clearState(); // [重要] 成功後清除暫存
+          clearState(); // 成功後清除暫存
           goToStep('thankyou');
         } else {
           throw new Error(result.error || 'Unknown error');
@@ -592,9 +492,8 @@
     }
 
     function resetFormState() {
-      clearState(); // 確保清除
-      initApp(); // 重新初始化
-      
+      clearState();
+      initApp();
       const btn = document.getElementById('btn-submit');
       btn.disabled = false;
       btn.innerText = '送出';
