@@ -5,18 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>滿意度調查</title>
   <style>
-    /* 保持原有的 CSS 樣式，不做更動，僅列出主要結構 */
+    /* CSS 樣式保持不變 */
     :root { --primary: #00BCD4; --primary-dark: #008ba3; --bg: #f0f4f8; --card: #ffffff; --text: #333; --border: #e0e0e0; --emoji-size: 2.2rem; }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 20px 0; color: var(--text); }
     .container { max-width: 600px; margin: 0 auto; background: var(--card); min-height: 95vh; box-shadow: 0 4px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; position: relative; }
+    
+    /* Loading & Error */
     .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .header { background: var(--primary); color: white; padding: 30px 25px; }
+    .error-view { text-align: center; padding: 40px; color: #d32f2f; display: none; }
+
+    /* Header & Lang Switch */
+    .header { background: var(--primary); color: white; padding: 30px 25px; position: relative; }
     .header h1 { margin: 0; font-size: 1.6rem; font-weight: 600; }
     .header p { margin: 8px 0 0; opacity: 0.9; font-size: 0.95rem; }
+    
+    /* 語言按鈕樣式 */
+    .lang-switch {
+      position: absolute; top: 15px; right: 15px;
+      background: rgba(255, 255, 255, 0.2); border-radius: 20px;
+      padding: 4px 6px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; max-width: 70%;
+    }
+    .lang-btn {
+      background: transparent; border: none; color: rgba(255,255,255,0.8);
+      font-size: 0.8rem; cursor: pointer; padding: 4px 8px; border-radius: 12px;
+      transition: 0.2s; white-space: nowrap;
+    }
+    .lang-btn.active { background: white; color: var(--primary); font-weight: bold; }
+    .lang-btn:hover { color: white; }
+
+    /* Forms */
     .view { display: none; padding: 25px; flex: 1; animation: fadeIn 0.3s ease forwards; }
     .view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -24,30 +45,35 @@
     label { display: block; margin-bottom: 10px; font-weight: 600; color: #444; font-size: 1rem; }
     input[type="text"], textarea { width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: #fafafa; transition: 0.2s; }
     input:focus, textarea:focus { border-color: var(--primary); background: #fff; outline: none; }
+    
     .options-grid { display: flex; flex-wrap: wrap; gap: 10px; }
     .option-btn { flex: 1 1 calc(33% - 10px); min-width: 100px; padding: 12px 10px; background: white; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; color: var(--text); cursor: pointer; transition: all 0.2s; text-align: center; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .option-btn:hover { border-color: var(--primary); color: var(--primary); background: #f0fbff; }
     .option-btn.selected { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 8px rgba(0, 188, 212, 0.3); font-weight: 600; }
+    
     .scenario-btn { flex: 1 1 calc(50% - 12px); padding: 20px 10px; font-size: 1.1rem; font-weight: 600; border-width: 2px; border-radius: 12px; }
     .other-input-wrapper { margin-top: 10px; display: none; animation: slideDown 0.3s ease; }
     .other-input-wrapper.show { display: block; }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    
     .rating-container { display: grid; gap: 8px; grid-template-columns: repeat(5, 1fr); margin-top: 5px; }
     .rate-opt { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
     .emoji { font-size: var(--emoji-size); margin-bottom: 5px; line-height: 1; filter: grayscale(100%); opacity: 0.4; transition: all 0.4s; }
     .label { font-size: 0.75rem; color: #999; text-align: center; }
     .rate-opt.selected .emoji { filter: grayscale(0%); opacity: 1; transform: scale(1.6); }
     .rate-opt.selected .label { color: var(--primary-dark); font-weight: bold; }
-    @media (max-width: 768px) { .rating-container { grid-template-columns: 1fr 1fr; grid-template-areas: "opt5 opt4" "opt3 opt3" "opt2 opt1"; } .rate-opt[data-val="5"] { grid-area: opt5; } .rate-opt[data-val="4"] { grid-area: opt4; } .rate-opt[data-val="3"] { grid-area: opt3; width: 60%; justify-self: center; } .rate-opt[data-val="2"] { grid-area: opt2; } .rate-opt[data-val="1"] { grid-area: opt1; } }
+    
     .submit-area { display: flex; gap: 12px; margin-top: 40px; align-items: stretch; }
     textarea.submit-input { flex: 1; min-height: 80px; resize: vertical; }
     .submit-btn { width: 100px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+    
     .nav-btn { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 600; margin-top: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0, 188, 212, 0.2); }
     .btn-secondary { display: block; margin: 20px auto 0; background: transparent; color: #999; border: 1px solid #eee; padding: 8px 20px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; }
     .thank-you { text-align: center; padding: 50px 20px; }
     .check-icon { width: 80px; height: 80px; line-height: 80px; border-radius: 50%; background: #e0f7fa; color: var(--primary); font-size: 3rem; margin: 0 auto 25px; }
-    .error-view { text-align: center; padding: 40px; color: #d32f2f; display: none; }
+    
+    @media (max-width: 768px) { .rating-container { grid-template-columns: 1fr 1fr; grid-template-areas: "opt5 opt4" "opt3 opt3" "opt2 opt1"; } .rate-opt[data-val="5"] { grid-area: opt5; } .rate-opt[data-val="4"] { grid-area: opt4; } .rate-opt[data-val="3"] { grid-area: opt3; width: 60%; justify-self: center; } .rate-opt[data-val="2"] { grid-area: opt2; } .rate-opt[data-val="1"] { grid-area: opt1; } }
   </style>
 </head>
 <body>
@@ -55,31 +81,39 @@
   <div class="container">
     <div id="loading-overlay" class="loading-overlay">
       <div class="spinner"></div>
-      <p style="margin-top:15px; color:#666; font-size:0.9rem;">載入問卷中...</p>
+      <p style="margin-top:15px; color:#666; font-size:0.9rem;" data-i18n="載入問卷中...">載入問卷中...</p>
     </div>
 
     <div id="error-view" class="error-view">
-      <h3>無法載入問卷</h3>
-      <p id="error-msg">請檢查網路連線後重試</p>
-      <button class="btn-secondary" onclick="window.location.reload()">重新整理</button>
+      <h3 data-i18n="無法載入問卷">無法載入問卷</h3>
+      <p id="error-msg" data-i18n="請檢查網路連線後重試">請檢查網路連線後重試</p>
+      <button class="btn-secondary" onclick="window.location.reload()" data-i18n="重新整理">重新整理</button>
     </div>
 
     <div class="header">
+      <div class="lang-switch">
+        <button class="lang-btn active" onclick="setLanguage('zh-TW')">繁中</button>
+        <button class="lang-btn" onclick="setLanguage('en')">EN</button>
+        <button class="lang-btn" onclick="setLanguage('ja')">日本語</button>
+        <button class="lang-btn" onclick="setLanguage('ko')">한국어</button>
+        <button class="lang-btn" onclick="setLanguage('vi')">Tiếng Việt</button>
+      </div>
+
       <h1 id="form-title">...</h1>
       <p id="form-desc"></p>
     </div>
 
     <div id="step-1" class="view">
       <div id="basic-questions-container"></div>
-      <button class="nav-btn" onclick="nextStepFromBasic()">下一步</button>
+      <button class="nav-btn" onclick="nextStepFromBasic()" data-i18n="下一步">下一步</button>
     </div>
 
     <div id="step-2" class="view">
       <div class="form-group">
-        <label style="text-align:center; font-size:1.2rem; margin-bottom:20px;">請選擇您的體驗情境</label>
+        <label style="text-align:center; font-size:1.2rem; margin-bottom:20px;" data-i18n="請選擇您的體驗情境">請選擇您的體驗情境</label>
         <div id="scenario-list" class="options-grid"></div>
       </div>
-      <button id="btn-back-to-basic" class="btn-secondary" onclick="goToStep(1)">← 返回修改基本資料</button>
+      <button id="btn-back-to-basic" class="btn-secondary" onclick="goToStep(1)" data-i18n="← 返回修改基本資料">← 返回修改基本資料</button>
     </div>
 
     <div id="step-3" class="view">
@@ -88,26 +122,40 @@
       
       <div class="submit-area" id="submit-area">
         <textarea id="open-feedback" class="submit-input" rows="3" placeholder="其他建議 (選填)..." oninput="saveOpenFeedback(this.value)"></textarea>
-        <button id="btn-submit" class="submit-btn" onclick="submitForm()">送出</button>
+        <button id="btn-submit" class="submit-btn" onclick="submitForm()" data-i18n="送出">送出</button>
       </div>
-      <button id="btn-reselect-scenario" class="btn-secondary" onclick="goToStep(2)">重選情境</button>
+      <button id="btn-reselect-scenario" class="btn-secondary" onclick="goToStep(2)" data-i18n="重選情境">重選情境</button>
     </div>
 
     <div id="step-thankyou" class="view">
       <div class="thank-you">
         <div class="check-icon">✓</div>
-        <h2 style="margin:0 0 10px;">提交成功</h2>
+        <h2 style="margin:0 0 10px;" data-i18n="提交成功">提交成功</h2>
         <p id="thank-msg" style="color:#666; margin-bottom:30px;"></p>
-        <button class="nav-btn" onclick="resetFormState()">再填一份</button>
+        <button class="nav-btn" onclick="resetFormState()" data-i18n="再填一份">再填一份</button>
       </div>
     </div>
   </div>
 
   <script>
+    // ==========================================
+    // 1. 預設最小字典 (防止 API 未載入時畫面空白)
+    // ==========================================
+    let I18N = {
+      "en": { "載入問卷中...": "Loading...", "送出": "Submit" },
+      "ja": { "載入問卷中...": "読み込み中...", "送出": "送信" },
+      "vi": { "載入問卷中...": "Đang tải...", "送出": "Gửi" }
+    };
+
+    let CURRENT_LANG = 'zh-TW';
+
+    // ==========================================
+    // Main App Logic
+    // ==========================================
     let CONFIG = null;
     const urlParams = new URLSearchParams(window.location.search);
     const URL_SCENARIO_ID = urlParams.get('id'); 
-    const LS_KEY = 'SURVEY_AUTO_SAVE_V1'; // LocalStorage Key
+    const LS_KEY = 'SURVEY_AUTO_SAVE_V1';
 
     const state = {
       step: 1,
@@ -121,6 +169,14 @@
     };
 
     window.onload = async function() {
+      // 1. 讀取上次語言偏好
+      const savedLang = localStorage.getItem('SURVEY_LANG');
+      if (savedLang) {
+        setLanguage(savedLang); 
+      } else {
+        setLanguage('zh-TW');
+      }
+
       try {
         const response = await fetch('/api/config');
         if (!response.ok) throw new Error('Network response was not ok');
@@ -129,17 +185,76 @@
 
         if (!CONFIG || !CONFIG.scenarios) throw new Error('Invalid Config Data');
 
+        // [關鍵] 合併 Sheet 來的字典
+        if (CONFIG.i18n) {
+          I18N = CONFIG.i18n;
+          // 重新整理語言 (因為可能剛載入新的翻譯)
+          setLanguage(CURRENT_LANG);
+        }
+
         initApp();
       } catch (err) {
         console.error('Config Load Error:', err);
         document.getElementById('loading-overlay').style.display = 'none';
         document.getElementById('error-view').style.display = 'block';
-        document.getElementById('error-msg').innerText = '載入失敗，請稍後再試。';
       }
     };
 
+    // --- Language Helper ---
+    function t(key) {
+      if (CURRENT_LANG === 'zh-TW') return key; // 原始語言直接回傳
+      
+      // 嘗試找字典
+      if (I18N && I18N[CURRENT_LANG] && I18N[CURRENT_LANG][key]) {
+        return I18N[CURRENT_LANG][key];
+      }
+      return key; // 找不到翻譯就回傳原文
+    }
+
+    function setLanguage(lang) {
+      CURRENT_LANG = lang;
+      localStorage.setItem('SURVEY_LANG', lang);
+
+      // UI: 按鈕狀態
+      document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.querySelector(`.lang-btn[onclick="setLanguage('${lang}')"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      // UI: 更新靜態文字 (data-i18n)
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.innerText = t(key);
+      });
+
+      // UI: 更新輸入框 Placeholder
+      const feedbackInput = document.getElementById('open-feedback');
+      if (feedbackInput) feedbackInput.placeholder = t('其他建議 (選填)...');
+      
+      // UI: 更新動態 Placeholder (基本資料的其他)
+      document.querySelectorAll('.other-input-wrapper input').forEach(input => {
+         // 我們利用 input 的 id 判斷題目，重設 placeholder 比較複雜，
+         // 這裡簡化為更新通用前綴
+         if (input.placeholder.includes('...')) {
+            // 簡易重繪機制：若 Config 已載入，重新渲染基本資料最保險
+         }
+      });
+
+      // 若 Config 已載入，重新渲染各區域以更新翻譯
+      if (CONFIG) {
+        document.getElementById('form-title').innerText = t(CONFIG.formTitle || '問卷系統');
+        document.getElementById('form-desc').innerText = CONFIG.formDescription || ''; // 描述通常不翻，或需另外處理
+        document.getElementById('thank-msg').innerText = CONFIG.thankYouMessage || ''; // 感謝詞通常不翻，或需另外處理
+
+        if(state.step === 1) renderBasicInfo();
+        if(state.step === 2) renderScenarios();
+        if(state.step === 3 && state.selectedScenario) setupStep3(state.selectedScenario);
+      }
+    }
+
+    // --- App Logic ---
     function initApp() {
-      document.getElementById('form-title').innerText = CONFIG.formTitle || '問卷系統';
+      // 初始渲染文字
+      document.getElementById('form-title').innerText = t(CONFIG.formTitle || '問卷系統');
       document.getElementById('form-desc').innerText = CONFIG.formDescription || '';
       document.getElementById('thank-msg').innerText = CONFIG.thankYouMessage || '';
 
@@ -147,7 +262,6 @@
       const scenarioKeys = Object.keys(CONFIG.scenarios || {});
       state.hasMultipleScenarios = scenarioKeys.length > 1;
 
-      // URL ID Logic
       let matchedName = null;
       if (URL_SCENARIO_ID && CONFIG.scenarioIdMap) {
         matchedName = CONFIG.scenarioIdMap[URL_SCENARIO_ID.toString()];
@@ -158,10 +272,8 @@
         state.hasMultipleScenarios = false; 
       }
 
-      // 嘗試還原暫存資料
       restoreState();
 
-      // Render
       if (state.hasBasic) renderBasicInfo();
       
       if (!state.isUrlForced && state.hasMultipleScenarios) {
@@ -170,29 +282,22 @@
         state.selectedScenario = scenarioKeys[0];
       }
 
-      // Hide Loading
       document.getElementById('loading-overlay').classList.add('hidden');
-      setTimeout(() => {
-        document.getElementById('loading-overlay').style.display = 'none';
-      }, 300);
+      setTimeout(() => { document.getElementById('loading-overlay').style.display = 'none'; }, 300);
 
       decideFirstStep();
     }
 
-    // --- LocalStorage Helpers (Final Version) ---
     function saveState() {
       try {
         const dataToSave = {
           basicData: state.basicData,
-          selectedScenario: state.isUrlForced ? null : state.selectedScenario, // 強制模式不存情境
+          selectedScenario: state.isUrlForced ? null : state.selectedScenario,
           satisfactionData: state.satisfactionData,
           openFeedback: state.openFeedback
         };
         localStorage.setItem(LS_KEY, JSON.stringify(dataToSave));
-      } catch (e) {
-        // [防護] 避免空間滿了導致崩潰
-        console.warn('LocalStorage full or disabled', e);
-      }
+      } catch (e) { console.warn('LocalStorage full', e); }
     }
 
     function restoreState() {
@@ -200,15 +305,12 @@
         const raw = localStorage.getItem(LS_KEY);
         if (!raw) return;
         const saved = JSON.parse(raw);
-        
-        // 合併資料
         if (saved.basicData) state.basicData = { ...saved.basicData };
         if (!state.isUrlForced && saved.selectedScenario && CONFIG.scenarios[saved.selectedScenario]) {
           state.selectedScenario = saved.selectedScenario;
         }
         if (saved.satisfactionData) state.satisfactionData = { ...saved.satisfactionData };
         if (saved.openFeedback) state.openFeedback = saved.openFeedback;
-
       } catch (e) {
         console.warn('Restore state failed', e);
         localStorage.removeItem(LS_KEY);
@@ -222,7 +324,6 @@
       state.openFeedback = "";
       if (!state.isUrlForced) state.selectedScenario = null;
     }
-    // ----------------------------
 
     function decideFirstStep() {
       if (state.hasBasic) {
@@ -234,7 +335,7 @@
           setupStep3(state.selectedScenario);
           goToStep(3);
         } else {
-          alert('設定錯誤：無情境資料');
+          alert('Config Error: No Scenarios');
         }
       }
     }
@@ -245,7 +346,9 @@
       (CONFIG.basicQuestions || []).forEach((q, idx) => {
         const div = document.createElement('div');
         div.className = 'form-group';
-        let html = `<label>${q.title}</label>`;
+        
+        // [翻譯] 題目
+        let html = `<label>${t(q.title)}</label>`;
         
         const savedVal = state.basicData[q.title] || '';
 
@@ -254,16 +357,18 @@
           q.options.forEach(opt => {
             const isSelected = savedVal === opt || (savedVal && !q.options.includes(savedVal) && (opt.includes('其他') || opt.includes('Other')));
             const activeClass = isSelected ? 'selected' : '';
-            html += `<div class="option-btn ${activeClass}" onclick="selectBasicOption(${idx}, '${opt}', this)">${opt}</div>`;
+            // [翻譯] 選項
+            html += `<div class="option-btn ${activeClass}" onclick="selectBasicOption(${idx}, '${opt}', this)">${t(opt)}</div>`;
           });
           html += `</div>`;
           
           const isOtherVal = savedVal && !q.options.includes(savedVal);
           const showClass = isOtherVal ? 'show' : '';
+          // [翻譯] Placeholder
           html += `
             <div id="basic-other-wrapper-${idx}" class="other-input-wrapper ${showClass}">
               <input type="text" id="basic-other-input-${idx}" 
-                     placeholder="請輸入${q.title}..." 
+                     placeholder="${t('請輸入')} ${t(q.title)}..." 
                      value="${isOtherVal ? savedVal : ''}"
                      oninput="updateBasicOther(${idx}, '${q.title}')">
             </div>
@@ -314,11 +419,11 @@
       (CONFIG.basicQuestions || []).forEach(q => {
         const val = state.basicData[q.title];
         if (!val || val.toString().trim() === '') {
-          missing.push(q.title);
+          missing.push(t(q.title)); // [翻譯] 提示訊息中的欄位名
         }
       });
       if (missing.length > 0) {
-        alert(`請填寫以下欄位：\n${missing.join(', ')}`);
+        alert(`${t('請填寫以下欄位：')}\n${missing.join(', ')}`);
         return;
       }
 
@@ -348,7 +453,8 @@
         } else {
            btn.className = 'option-btn scenario-btn';
         }
-        btn.innerText = key;
+        // [翻譯] 情境名稱
+        btn.innerText = t(key);
         btn.onclick = () => {
           state.selectedScenario = key;
           saveState();
@@ -360,7 +466,7 @@
     }
 
     function setupStep3(scenarioName) {
-      document.getElementById('current-scenario-title').innerText = scenarioName;
+      document.getElementById('current-scenario-title').innerText = t('滿意度調查');
       const container = document.getElementById('satisfaction-questions-container');
       container.innerHTML = '';
       
@@ -369,8 +475,9 @@
       questions.forEach((qTitle, idx) => {
         const div = document.createElement('div');
         div.className = 'form-group';
+        // [翻譯] 題目
         div.innerHTML = `
-          <label style="margin-bottom:8px;">${idx + 1}. ${qTitle}</label>
+          <label style="margin-bottom:8px;">${idx + 1}. ${t(qTitle)}</label>
           <div class="rating-container" id="rate-group-${idx}">
             ${renderEmojiOptions(idx)}
           </div>
@@ -380,7 +487,8 @@
       
       const openQ = (CONFIG.scenarios && CONFIG.scenarios[scenarioName]) ? CONFIG.scenarios[scenarioName].openQuestion : '';
       const input = document.getElementById('open-feedback');
-      input.placeholder = openQ || '其他建議 (選填)...';
+      // [翻譯] 開放式問題 placeholder
+      input.placeholder = openQ ? t(openQ) : t('其他建議 (選填)...');
       input.value = state.openFeedback || '';
     }
 
@@ -402,10 +510,11 @@
 
       return emojis.map(e => {
         const selectedClass = (savedRate === e.val) ? 'selected' : '';
+        // [翻譯] 滿意度標籤
         return `
         <div class="rate-opt ${selectedClass}" data-val="${e.val}" onclick="selectRating(${qIdx}, ${e.val}, this)">
           <div class="emoji">${e.char}</div>
-          <div class="label">${e.label}</div>
+          <div class="label">${t(e.label)}</div>
         </div>
       `}).join('');
     }
@@ -427,6 +536,7 @@
       if (step === 2) {
         const backBtn = document.getElementById('btn-back-to-basic');
         if (backBtn) backBtn.style.display = state.hasBasic ? 'block' : 'none';
+        // 若回到上一步，重新渲染以確保翻譯正確
         renderScenarios();
       }
 
@@ -444,17 +554,17 @@
 
     async function submitForm() {
       const scenCfg = CONFIG.scenarios && CONFIG.scenarios[state.selectedScenario];
-      if (!scenCfg) { alert('尚未選擇情境'); return; }
+      if (!scenCfg) { alert(t('尚未選擇情境')); return; }
       
       const qCount = scenCfg.questions.length;
       if (Object.keys(state.satisfactionData).length < qCount) {
-        alert('請完成所有滿意度評分');
+        alert(t('請完成所有滿意度評分'));
         return;
       }
 
       const btn = document.getElementById('btn-submit');
       btn.disabled = true;
-      btn.innerText = '送出...';
+      btn.innerText = t('送出...');
 
       const orderedBasicValues = (CONFIG.basicQuestions || []).map(q => state.basicData[q.title] || '');
       const orderedSatValues = [];
@@ -479,15 +589,15 @@
         const result = await response.json();
 
         if (result.success) {
-          clearState(); // 成功後清除暫存
+          clearState(); 
           goToStep('thankyou');
         } else {
           throw new Error(result.error || 'Unknown error');
         }
       } catch (err) {
-        alert('連線失敗: ' + err.message);
+        alert(t('連線失敗: ') + err.message);
         btn.disabled = false;
-        btn.innerText = '送出';
+        btn.innerText = t('送出');
       }
     }
 
@@ -496,7 +606,7 @@
       initApp();
       const btn = document.getElementById('btn-submit');
       btn.disabled = false;
-      btn.innerText = '送出';
+      btn.innerText = t('送出');
     }
   </script>
 </body>
