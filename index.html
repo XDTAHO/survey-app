@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>滿意度調查</title>
   <style>
-    /* 樣式保持不變 */
+    /* CSS 樣式 */
     :root { --primary: #00BCD4; --primary-dark: #008ba3; --bg: #f0f4f8; --card: #ffffff; --text: #333; --border: #e0e0e0; --emoji-size: 2.2rem; }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 20px 0; color: var(--text); }
     .container { max-width: 600px; margin: 0 auto; background: var(--card); min-height: 95vh; box-shadow: 0 4px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; position: relative; }
+    
+    /* Loading & Error */
     .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; transition: opacity 0.3s; }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; }
     .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
@@ -32,6 +34,7 @@
     label { display: block; margin-bottom: 10px; font-weight: 600; color: #444; font-size: 1rem; }
     input[type="text"], textarea { width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: #fafafa; transition: 0.2s; }
     input:focus, textarea:focus { border-color: var(--primary); background: #fff; outline: none; }
+    
     .options-grid { display: flex; flex-wrap: wrap; gap: 10px; }
     .option-btn { flex: 1 1 calc(33% - 10px); min-width: 100px; padding: 12px 10px; background: white; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; color: var(--text); cursor: pointer; transition: all 0.2s; text-align: center; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .option-btn:hover { border-color: var(--primary); color: var(--primary); background: #f0fbff; }
@@ -40,12 +43,20 @@
     .other-input-wrapper { margin-top: 10px; display: none; animation: slideDown 0.3s ease; }
     .other-input-wrapper.show { display: block; }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-    .rating-container { display: grid; gap: 8px; grid-template-columns: repeat(5, 1fr); margin-top: 5px; }
+    
+    /* === [修改 1] Emoji 評分樣式 (強制 5 列) === */
+    .rating-container { 
+      display: grid; 
+      gap: 8px; 
+      grid-template-columns: repeat(5, 1fr); /* 永遠維持 5 欄 */
+      margin-top: 5px; 
+    }
     .rate-opt { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
     .emoji { font-size: var(--emoji-size); margin-bottom: 5px; line-height: 1; filter: grayscale(100%); opacity: 0.4; transition: all 0.4s; }
     .label { font-size: 0.75rem; color: #999; text-align: center; }
     .rate-opt.selected .emoji { filter: grayscale(0%); opacity: 1; transform: scale(1.6); }
     .rate-opt.selected .label { color: var(--primary-dark); font-weight: bold; }
+    
     .submit-area { display: flex; gap: 12px; margin-top: 40px; align-items: stretch; }
     textarea.submit-input { flex: 1; min-height: 80px; resize: vertical; }
     .submit-btn { width: 100px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -55,7 +66,24 @@
     .thank-you { text-align: center; padding: 50px 20px; }
     .check-icon { width: 80px; height: 80px; line-height: 80px; border-radius: 50%; background: #e0f7fa; color: var(--primary); font-size: 3rem; margin: 0 auto 25px; }
     .footer-version { text-align: center; font-size: 0.75rem; color: #ccc; padding: 15px 0 20px; margin-top: auto; }
-    @media (max-width: 768px) { .rating-container { grid-template-columns: 1fr 1fr; grid-template-areas: "opt5 opt4" "opt3 opt3" "opt2 opt1"; } .rate-opt[data-val="5"] { grid-area: opt5; } .rate-opt[data-val="4"] { grid-area: opt4; } .rate-opt[data-val="3"] { grid-area: opt3; width: 60%; justify-self: center; } .rate-opt[data-val="2"] { grid-area: opt2; } .rate-opt[data-val="1"] { grid-area: opt1; } }
+
+    /* 手機版調整：讓 5 個 emoji 塞得下 */
+    @media (max-width: 768px) { 
+      .rating-container { 
+        gap: 4px; /* 縮小間距 */
+      }
+      .rate-opt {
+        padding: 5px 0; /* 縮小 padding */
+      }
+      .emoji {
+        font-size: 1.8rem; /* 稍微縮小 emoji */
+      }
+      .label {
+        font-size: 0.65rem; /* 縮小文字 */
+        white-space: nowrap; /* 不換行 */
+        transform: scale(0.9); /* 強制再縮小一點以防爆版 */
+      }
+    }
   </style>
 </head>
 <body>
@@ -110,16 +138,15 @@
       </div>
     </div>
 
-    <div class="footer-version">System v3.4 (Sheet-Driven Lang)</div>
+    <div class="footer-version">System v3.8 (Fix Mobile & I18N)</div>
 
   </div>
 
   <script>
-    // 預設最小字典
     let I18N = { "en": { "載入問卷中...": "Loading...", "送出": "Submit" } };
     let CURRENT_LANG = 'zh-TW';
     let CONFIG = null;
-    let LANG_NAMES_MAP = { 'zh-TW': '繁體中文' }; // 預設
+    let LANG_NAMES_MAP = { 'zh-TW': '繁體中文' };
 
     const urlParams = new URLSearchParams(window.location.search);
     const URL_SCENARIO_ID = urlParams.get('id'); 
@@ -144,9 +171,7 @@
 
         if (CONFIG.i18n) {
           I18N = CONFIG.i18n;
-          // [關鍵] 從 API 讀取語言顯示名稱
           if (CONFIG.langNames) LANG_NAMES_MAP = CONFIG.langNames;
-          
           renderLanguageButtons();
           setLanguage(CURRENT_LANG);
         } else {
@@ -164,23 +189,17 @@
     function renderLanguageButtons() {
       const container = document.getElementById('lang-switch-container');
       container.innerHTML = ''; 
-
-      // 取得所有可用語言 (包含 Config 回傳的和繁中)
       const availableLangs = ['zh-TW'];
       if (CONFIG && CONFIG.i18n) {
         Object.keys(CONFIG.i18n).forEach(code => {
           if (!availableLangs.includes(code)) availableLangs.push(code);
         });
       }
-
       availableLangs.forEach(code => {
         const btn = document.createElement('button');
         btn.className = 'lang-btn';
         if (code === CURRENT_LANG) btn.classList.add('active');
-        
-        // 使用從 Sheet 讀回來的顯示名稱
         btn.innerText = LANG_NAMES_MAP[code] || code; 
-        
         btn.onclick = () => setLanguage(code);
         container.appendChild(btn);
       });
@@ -196,17 +215,14 @@
       CURRENT_LANG = lang;
       localStorage.setItem('SURVEY_LANG', lang);
 
-      // UI: 更新按鈕 active 狀態
       const btns = document.getElementById('lang-switch-container').children;
       for (let btn of btns) {
         btn.classList.remove('active');
-        // 簡單判定：按鈕的 onclick 函數包含了該語言代碼
         if (btn.onclick.toString().includes(`'${lang}'`) || btn.onclick.toString().includes(`"${lang}"`)) {
             btn.classList.add('active');
         }
       }
 
-      // UI: 更新文字
       document.querySelectorAll('[data-i18n]').forEach(el => {
         el.innerText = t(el.getAttribute('data-i18n'));
       });
@@ -214,17 +230,13 @@
       const feedbackInput = document.getElementById('open-feedback');
       if (feedbackInput) feedbackInput.placeholder = t('其他建議 (選填)...');
       
-      // 動態更新輸入框 placeholder
-      document.querySelectorAll('.other-input-wrapper input').forEach(input => {
-         const idParts = input.id.split('-');
-         const qIdx = idParts[idParts.length-1];
-         // 簡易判斷：若 title 還沒存，就暫不更新，通常這會在 renderBasicInfo 重繪時處理
-      });
-
+      // 更新畫面上已有的動態內容
       if (CONFIG) {
         document.getElementById('form-title').innerText = t(CONFIG.formTitle || '問卷系統');
-        document.getElementById('form-desc').innerText = CONFIG.formDescription || '';
-        document.getElementById('thank-msg').innerText = CONFIG.thankYouMessage || '';
+        
+        // [修正 2] 說明與感謝詞加入 t() 翻譯
+        document.getElementById('form-desc').innerText = t(CONFIG.formDescription || '');
+        document.getElementById('thank-msg').innerText = t(CONFIG.thankYouMessage || '');
 
         if(state.step === 1) renderBasicInfo();
         if(state.step === 2) renderScenarios();
@@ -232,12 +244,13 @@
       }
     }
 
-    // --- App Logic (initApp, saveState, restoreState, clearState, navigation...) ---
-    // (邏輯與之前版本相同，為節省篇幅省略，請確保這些函式存在於您的檔案中)
+    // --- App Logic ---
     function initApp() {
       document.getElementById('form-title').innerText = t(CONFIG.formTitle || '問卷系統');
-      document.getElementById('form-desc').innerText = CONFIG.formDescription || '';
-      document.getElementById('thank-msg').innerText = CONFIG.thankYouMessage || '';
+      // [修正 2] 初始載入也要翻譯
+      document.getElementById('form-desc').innerText = t(CONFIG.formDescription || '');
+      document.getElementById('thank-msg').innerText = t(CONFIG.thankYouMessage || '');
+
       state.hasBasic = CONFIG.basicQuestions && CONFIG.basicQuestions.length > 0;
       const scenarioKeys = Object.keys(CONFIG.scenarios || {});
       state.hasMultipleScenarios = scenarioKeys.length > 1;
