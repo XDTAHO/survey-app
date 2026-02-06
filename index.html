@@ -18,15 +18,44 @@
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .error-view { text-align: center; padding: 40px; color: #d32f2f; display: none; }
     
-    .header { background: var(--primary); color: white; padding: 20px 25px; display: flex; flex-direction: column; gap: 15px; }
+    /* === [UI修改重點] Header 與 語言選單 === */
+    .header { 
+      background: var(--primary); 
+      color: white; 
+      padding: 20px 25px; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 15px; 
+    }
     .header h1 { margin: 0; font-size: 1.6rem; font-weight: 600; line-height: 1.3; }
     .header p { margin: 8px 0 0; opacity: 0.9; font-size: 0.95rem; }
     
-    .lang-switch { align-self: flex-end; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; width: 100%; }
-    .lang-btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; font-size: 0.85rem; cursor: pointer; padding: 6px 12px; border-radius: 20px; transition: all 0.2s; white-space: nowrap; }
+    /* 語言選單容器：左對齊、單行優先 */
+    .lang-switch { 
+      display: flex; 
+      flex-wrap: wrap; /* 允許換行 */
+      gap: 6px;        /* 按鈕間距 */
+      justify-content: flex-start; /* [關鍵] 從左邊開始排 */
+      width: 100%;
+    }
+
+    /* 語言按鈕：預設樣式 */
+    .lang-btn { 
+      background: rgba(255, 255, 255, 0.2); 
+      border: 1px solid rgba(255, 255, 255, 0.3); 
+      color: white; 
+      font-size: 0.85rem; 
+      cursor: pointer; 
+      padding: 5px 12px; 
+      border-radius: 20px; 
+      transition: all 0.2s; 
+      white-space: nowrap; 
+      flex: 0 1 auto; /* 預設不縮放，視內容而定 */
+    }
     .lang-btn:hover { background: rgba(255, 255, 255, 0.4); }
     .lang-btn.active { background: white; color: var(--primary); font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-color: white; }
 
+    /* Forms */
     .view { display: none; padding: 25px; flex: 1; animation: fadeIn 0.3s ease forwards; }
     .view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -44,13 +73,7 @@
     .other-input-wrapper.show { display: block; }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     
-    /* === [修改 1] Emoji 評分樣式 (強制 5 列) === */
-    .rating-container { 
-      display: grid; 
-      gap: 8px; 
-      grid-template-columns: repeat(5, 1fr); /* 永遠維持 5 欄 */
-      margin-top: 5px; 
-    }
+    .rating-container { display: grid; gap: 8px; grid-template-columns: repeat(5, 1fr); margin-top: 5px; }
     .rate-opt { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
     .emoji { font-size: var(--emoji-size); margin-bottom: 5px; line-height: 1; filter: grayscale(100%); opacity: 0.4; transition: all 0.4s; }
     .label { font-size: 0.75rem; color: #999; text-align: center; }
@@ -67,21 +90,20 @@
     .check-icon { width: 80px; height: 80px; line-height: 80px; border-radius: 50%; background: #e0f7fa; color: var(--primary); font-size: 3rem; margin: 0 auto 25px; }
     .footer-version { text-align: center; font-size: 0.75rem; color: #ccc; padding: 15px 0 20px; margin-top: auto; }
 
-    /* 手機版調整：讓 5 個 emoji 塞得下 */
+    /* === 手機版優化 === */
     @media (max-width: 768px) { 
-      .rating-container { 
-        gap: 4px; /* 縮小間距 */
-      }
-      .rate-opt {
-        padding: 5px 0; /* 縮小 padding */
-      }
-      .emoji {
-        font-size: 1.8rem; /* 稍微縮小 emoji */
-      }
-      .label {
-        font-size: 0.65rem; /* 縮小文字 */
-        white-space: nowrap; /* 不換行 */
-        transform: scale(0.9); /* 強制再縮小一點以防爆版 */
+      /* Emoji: 強制 1 列顯示 */
+      .rating-container { gap: 4px; }
+      .rate-opt { padding: 5px 0; }
+      .emoji { font-size: 1.8rem; }
+      .label { font-size: 0.65rem; white-space: nowrap; transform: scale(0.9); }
+
+      /* [UI修改重點] 語言按鈕在手機上縮小，以便塞進同一行 */
+      .lang-switch { gap: 4px; } /* 間距縮小 */
+      .lang-btn {
+        padding: 4px 8px;   /* 內距縮小 */
+        font-size: 0.75rem; /* 字體縮小 */
+        /* flex: 1; 如果想要強制撐滿一行可加這行，但目前這設定是自然排列 */
       }
     }
   </style>
@@ -138,7 +160,7 @@
       </div>
     </div>
 
-    <div class="footer-version">System v3.8 (Fix Mobile & I18N)</div>
+    <div class="footer-version">System v3.9 (UI Polish)</div>
 
   </div>
 
@@ -230,11 +252,8 @@
       const feedbackInput = document.getElementById('open-feedback');
       if (feedbackInput) feedbackInput.placeholder = t('其他建議 (選填)...');
       
-      // 更新畫面上已有的動態內容
       if (CONFIG) {
         document.getElementById('form-title').innerText = t(CONFIG.formTitle || '問卷系統');
-        
-        // [修正 2] 說明與感謝詞加入 t() 翻譯
         document.getElementById('form-desc').innerText = t(CONFIG.formDescription || '');
         document.getElementById('thank-msg').innerText = t(CONFIG.thankYouMessage || '');
 
@@ -244,10 +263,8 @@
       }
     }
 
-    // --- App Logic ---
     function initApp() {
       document.getElementById('form-title').innerText = t(CONFIG.formTitle || '問卷系統');
-      // [修正 2] 初始載入也要翻譯
       document.getElementById('form-desc').innerText = t(CONFIG.formDescription || '');
       document.getElementById('thank-msg').innerText = t(CONFIG.thankYouMessage || '');
 
